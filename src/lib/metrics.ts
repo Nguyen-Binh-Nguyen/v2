@@ -46,12 +46,11 @@ export type Metrics = {
   avgPnLByTime: { hour: string; avgPnL: number }[];
   byWeekday: BreakdownRow[];
   byMonth: BreakdownRow[];
-  bySetup: BreakdownRow[];
+  byDirection: BreakdownRow[];
   byConfluence: BreakdownRow[];
   byPsychology: BreakdownRow[];
   byPlanCompliance: BreakdownRow[];
   byResult: BreakdownRow[];
-  byDirection: BreakdownRow[];
   avgRRByResult: { result: string; avgRR: number; trades: number }[];
 };
 
@@ -285,14 +284,14 @@ export function computeMetrics(trades: Trade[]): Metrics {
       proportion: totalTrades > 0 ? (e.trades / totalTrades) * 100 : 0,
     }));
 
-  // By setup type
-  const setupMap = new Map<string, GroupEntry>();
+  // By direction (Long/Short)
+  const dirMap = new Map<string, GroupEntry>();
+  dirMap.set('Long', newEntry());
+  dirMap.set('Short', newEntry());
   for (const t of sorted) {
-    const key = t.setup_type || 'Unknown';
-    if (!setupMap.has(key)) setupMap.set(key, newEntry());
-    addTrade(setupMap.get(key)!, t);
+    addTrade(dirMap.get(t.direction === 'long' ? 'Long' : 'Short')!, t);
   }
-  const bySetup = buildBreakdown(setupMap, totalTrades);
+  const byDirection = buildBreakdown(dirMap, totalTrades);
 
   // By confluence
   const confluenceMap = new Map<string, GroupEntry>();
@@ -361,15 +360,6 @@ export function computeMetrics(trades: Trade[]): Metrics {
     .map(([result, e]) => ({ result: RESULT_LABELS[result] || result, avgRR: e.count > 0 ? e.sum / e.count : 0, trades: e.count }))
     .sort((a, b) => b.trades - a.trades);
 
-  // By direction
-  const dirMap = new Map<string, GroupEntry>();
-  dirMap.set('Long', newEntry());
-  dirMap.set('Short', newEntry());
-  for (const t of sorted) {
-    addTrade(dirMap.get(t.direction === 'long' ? 'Long' : 'Short')!, t);
-  }
-  const byDirection = buildBreakdown(dirMap, totalTrades);
-
   return {
     totalTrades,
     wins,
@@ -406,12 +396,11 @@ export function computeMetrics(trades: Trade[]): Metrics {
     avgPnLByTime,
     byWeekday,
     byMonth,
-    bySetup,
+    byDirection,
     byConfluence,
     byPsychology,
     byPlanCompliance,
     byResult,
-    byDirection,
     avgRRByResult,
   };
 }

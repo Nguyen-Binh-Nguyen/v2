@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { X, Upload, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
+import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import type { Trade } from '@/lib/supabase';
 import type { UseJournalData } from '@/hooks/useJournalData';
 import { PSYCHOLOGY_OPTIONS, RESULT_LABELS } from '@/lib/metrics';
@@ -33,7 +33,7 @@ Mistakes from Today:
 `;
 
 export function TradeForm({ trade, onClose, onSave, initialDate, data }: TradeFormProps) {
-  const { uploadImage, getSignedUrl, settings, updateConfluences } = data;
+  const { uploadImage, getSignedUrl, settings } = data;
   const [form, setForm] = useState({
     date: trade?.date || initialDate || new Date().toISOString().slice(0, 10),
     time: trade?.time || '',
@@ -47,12 +47,11 @@ export function TradeForm({ trade, onClose, onSave, initialDate, data }: TradeFo
     confluences: trade?.confluences?.slice() || [] as string[],
     notes: trade?.notes || DEFAULT_NOTES,
     image_path: trade?.image_path || null as string | null,
+  setup_type: trade?.setup_type || '',
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showConfluenceManager, setShowConfluenceManager] = useState(false);
-  const [newConfluence, setNewConfluence] = useState('');
   const notesRef = useRef<HTMLTextAreaElement>(null);
 
   const confluenceOptions = settings?.confluences || [];
@@ -96,21 +95,6 @@ export function TradeForm({ trade, onClose, onSave, initialDate, data }: TradeFo
     });
   };
 
-  const addConfluence = async () => {
-    const trimmed = newConfluence.trim();
-    if (!trimmed || confluenceOptions.includes(trimmed)) return;
-    const updated = [...confluenceOptions, trimmed];
-    await updateConfluences(updated);
-    setNewConfluence('');
-    setForm((f) => ({ ...f, confluences: [...f.confluences, trimmed] }));
-  };
-
-  const deleteConfluence = async (c: string) => {
-    const updated = confluenceOptions.filter((x) => x !== c);
-    await updateConfluences(updated);
-    setForm((f) => ({ ...f, confluences: f.confluences.filter((x) => x !== c) }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -121,7 +105,7 @@ export function TradeForm({ trade, onClose, onSave, initialDate, data }: TradeFo
         time: form.time || null,
         symbol: '',
         direction: form.direction,
-        setup_type: '',
+        setup_type: form.setup_type,
         result: form.result,
         pnl: parseFloat(form.pnl) || 0,
         r_multiple: null,
@@ -193,43 +177,7 @@ export function TradeForm({ trade, onClose, onSave, initialDate, data }: TradeFo
             </div>
 
             <div className="mt-4">
-              <div className="flex items-center justify-between mb-1">
-                <label className={labelClass + ' mb-0'}>Confluences</label>
-                <button
-                  type="button"
-                  onClick={() => setShowConfluenceManager(!showConfluenceManager)}
-                  className="text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center gap-1"
-                >
-                  {showConfluenceManager ? 'Done' : 'Manage'}
-                </button>
-              </div>
-              {showConfluenceManager && (
-                <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-800 space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newConfluence}
-                      onChange={(e) => setNewConfluence(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addConfluence(); } }}
-                      placeholder="Add new confluence..."
-                      className="flex-1 px-2 py-1.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded text-sm text-gray-900 dark:text-white focus:outline-none focus:border-gray-500"
-                    />
-                    <button type="button" onClick={addConfluence} className="px-2 py-1.5 bg-gray-900 dark:bg-white hover:opacity-90 text-white dark:text-gray-900 rounded text-sm flex items-center gap-1">
-                      <Plus className="w-3.5 h-3.5" /> Add
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-                    {confluenceOptions.map((c) => (
-                      <span key={c} className="flex items-center gap-1 px-2 py-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-xs text-gray-700 dark:text-gray-300">
-                        {c}
-                        <button type="button" onClick={() => deleteConfluence(c)} className="text-gray-400 hover:text-red-500">
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <label className={labelClass}>Confluences</label>
               <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1">
                 {confluenceOptions.map((c) => (
                   <button
@@ -245,6 +193,11 @@ export function TradeForm({ trade, onClose, onSave, initialDate, data }: TradeFo
                     {c}
                   </button>
                 ))}
+                {confluenceOptions.length === 0 && (
+                  <span className="text-xs text-gray-400 dark:text-gray-500 px-2 py-1">
+                    No confluences configured. Add them on the Statistics page.
+                  </span>
+                )}
               </div>
             </div>
 

@@ -15,7 +15,13 @@ export function CoverPhoto({ coverUrl, offset, onUpload, onReposition, onRemove 
   const [dragging, setDragging] = useState(false);
   const [repositionMode, setRepositionMode] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [localOffset, setLocalOffset] = useState(offset);
   const dragStart = useRef({ y: 0, offset: 0 });
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setLocalOffset(offset);
+  }, [offset]);
 
   const handleFile = useCallback(
     (file: File) => {
@@ -66,39 +72,47 @@ export function CoverPhoto({ coverUrl, offset, onUpload, onReposition, onRemove 
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!coverUrl || !repositionMode) return;
+    e.preventDefault();
     setDragging(true);
-    dragStart.current = { y: e.clientY, offset };
+    dragStart.current = { y: e.clientY, offset: localOffset };
   };
 
   useEffect(() => {
     if (!dragging) return;
     const handleMove = (e: MouseEvent) => {
-      const dy = e.clientY - dragStart.current.y;
-      const container = containerRef.current;
-      if (!container) return;
-      const containerHeight = container.offsetHeight;
-      const bgHeight = containerHeight * 1.5;
-      const maxOffset = bgHeight - containerHeight;
-      const newOffset = Math.max(0, Math.min(maxOffset, dragStart.current.offset + dy));
-      onReposition((newOffset / containerHeight) * 100);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        const dy = e.clientY - dragStart.current.y;
+        const container = containerRef.current;
+        if (!container) return;
+        const containerHeight = container.offsetHeight;
+        const bgHeight = containerHeight * 1.5;
+        const maxPx = bgHeight - containerHeight;
+        const pxOffset = (dragStart.current.offset / 100) * containerHeight + dy;
+        const clamped = Math.max(0, Math.min(maxPx, pxOffset));
+        const newOffset = (clamped / containerHeight) * 100;
+        setLocalOffset(newOffset);
+      });
     };
     const handleUp = () => {
       setDragging(false);
       setRepositionMode(false);
+      onReposition(localOffset);
     };
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
     return () => {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [dragging, onReposition]);
+  }, [dragging, onReposition, localOffset]);
 
   return (
     <>
       <div
         ref={containerRef}
-        className="relative w-full h-48 md:h-64 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-[#1a1a2e]"
+        className="relative w-full h-48 md:h-64 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-[#1a1a2e] select-none"
         onContextMenu={handleContextMenu}
         onMouseDown={handleMouseDown}
         style={{ cursor: repositionMode ? (dragging ? 'grabbing' : 'grab') : 'default' }}
@@ -108,7 +122,7 @@ export function CoverPhoto({ coverUrl, offset, onUpload, onReposition, onRemove 
             className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage: `url(${coverUrl})`,
-              backgroundPositionY: `${offset}%`,
+              backgroundPositionY: `${localOffset}%`,
               height: '150%',
             }}
           />

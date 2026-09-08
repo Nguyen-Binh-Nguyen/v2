@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, Pencil, Trash2, Search, Image as ImageIcon, Table as TableIcon, CalendarDays, GalleryHorizontalEnd, Filter, Download, ClipboardList, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Search, Image as ImageIcon, Table as TableIcon, CalendarDays, GalleryHorizontalEnd, Filter, Download, ClipboardList, TrendingUp, Check, X } from 'lucide-react';
 import type { Trade } from '@/lib/supabase';
 import type { UseJournalData } from '@/hooks/useJournalData';
 import { computeMetrics, getWeekKey, getCurrentWeekKey, RESULT_LABELS } from '@/lib/metrics';
@@ -20,6 +20,14 @@ const VIEW_TABS: { id: ViewTab; label: string; icon: typeof TableIcon }[] = [
   { id: 'loss_log', label: 'Loss Log', icon: TableIcon },
   { id: 'win_log', label: 'Win Log', icon: TableIcon },
 ];
+
+const PSYCHOLOGY_COLORS: Record<string, string> = {
+  'Calm/Disciplined': '#10b981',
+  'FOMO/Impulsive': '#f59e0b',
+  'Fearful/Hesitant': '#3b82f6',
+  'Revenge/Tilted': '#ef4444',
+  'Greedy/Overconfident': '#ef4444',
+};
 
 export function DocumentaryPage({ data }: DocumentaryPageProps) {
   const { trades, addTrade, updateTrade, deleteTrade } = data;
@@ -108,7 +116,6 @@ export function DocumentaryPage({ data }: DocumentaryPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Documentary heading */}
       <div className="flex items-end justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300">
@@ -126,7 +133,6 @@ export function DocumentaryPage({ data }: DocumentaryPageProps) {
         </div>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {summaryCards.map((card) => (
           <div key={card.label} className="bg-white dark:bg-[#252527] border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-3">
@@ -136,7 +142,6 @@ export function DocumentaryPage({ data }: DocumentaryPageProps) {
         ))}
       </div>
 
-      {/* Documentary log */}
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#252527] overflow-hidden shadow-sm">
         <div className="px-5 pt-5 pb-3">
           <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
@@ -146,111 +151,106 @@ export function DocumentaryPage({ data }: DocumentaryPageProps) {
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your execution history · {metrics.totalTrades} records</p>
         </div>
 
-        {/* View switcher */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-800">
-        <div className="flex flex-wrap gap-1 p-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
-          {VIEW_TABS.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => { setView(tab.id); setSelectedWeek(null); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  view === tab.id ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="relative w-full sm:w-auto">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search trades..."
-            className="pl-8 pr-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-500 w-full sm:w-56"
-          />
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-5">
-      {(view === 'full_log' || view === 'loss_log' || view === 'win_log') && (
-        <TradeTable trades={filteredTrades} onEdit={(t) => { setEditingTrade(t); setShowForm(true); }} onDelete={handleDelete} />
-      )}
-
-      {view === 'full_gallery' && <TradeGallery trades={filteredTrades} onEdit={(t) => { setEditingTrade(t); setShowForm(true); }} />}
-
-      {(view === 'weekly_log' || view === 'weekly_gallery') && (
-        <div className="flex gap-4">
-          {/* Week sidebar */}
-          <div className="w-48 shrink-0 space-y-1">
-            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 pb-2">Weeks</div>
-            <div className="space-y-1 max-h-[600px] overflow-y-auto">
-              {weeklyGroups.map((group) => (
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex flex-wrap gap-1 p-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
+            {VIEW_TABS.map((tab) => {
+              const Icon = tab.icon;
+              return (
                 <button
-                  key={group.key}
-                  onClick={() => setSelectedWeek(group.key)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                    activeWeek === group.key
-                      ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                      : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
+                  key={tab.id}
+                  onClick={() => { setView(tab.id); setSelectedWeek(null); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    view === tab.id ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5">
-                    <CalendarDays className="w-3 h-3 shrink-0" />
-                    {group.key}
-                  </div>
-                  <div className={`text-[10px] mt-0.5 ${activeWeek === group.key ? 'text-gray-300 dark:text-gray-700' : 'text-gray-400 dark:text-gray-500'}`}>
-                    {group.trades.length} trade{group.trades.length !== 1 ? 's' : ''}
-                  </div>
+                  <Icon className="w-3.5 h-3.5" />
+                  {tab.label}
                 </button>
-              ))}
-              {weeklyGroups.length === 0 && (
-                <div className="text-xs text-gray-400 dark:text-gray-500 px-2 py-4">No weeks found.</div>
-              )}
-            </div>
+              );
+            })}
           </div>
 
-          {/* Active week content */}
-          <div className="flex-1 min-w-0">
-            {activeWeekGroup ? (
-              <div className={`rounded-xl border ${activeWeekGroup.isCurrent ? 'border-gray-400 dark:border-gray-500' : 'border-gray-200 dark:border-gray-800'} bg-white/50 dark:bg-gray-900/50 overflow-hidden`}>
-                <div className={`px-4 py-2.5 text-sm font-medium ${activeWeekGroup.isCurrent ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white' : 'bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300'} flex items-center gap-2`}>
-                  <CalendarDays className="w-4 h-4" />
-                  {activeWeekGroup.key}
-                  {activeWeekGroup.isCurrent && <span className="text-xs px-1.5 py-0.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded">Current</span>}
+          <div className="relative w-full sm:w-auto">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search trades..."
+              className="pl-8 pr-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-500 w-full sm:w-56"
+            />
+          </div>
+        </div>
+
+        <div className="p-5">
+          {(view === 'full_log' || view === 'loss_log' || view === 'win_log') && (
+            <TradeTable trades={filteredTrades} onEdit={(t) => { setEditingTrade(t); setShowForm(true); }} onDelete={handleDelete} />
+          )}
+
+          {view === 'full_gallery' && <TradeGallery trades={filteredTrades} onEdit={(t) => { setEditingTrade(t); setShowForm(true); }} />}
+
+          {(view === 'weekly_log' || view === 'weekly_gallery') && (
+            <div className="flex gap-4">
+              <div className="w-48 shrink-0 space-y-1">
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 pb-2">Weeks</div>
+                <div className="space-y-1 max-h-[600px] overflow-y-auto">
+                  {weeklyGroups.map((group) => (
+                    <button
+                      key={group.key}
+                      onClick={() => setSelectedWeek(group.key)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                        activeWeek === group.key
+                          ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                          : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <CalendarDays className="w-3 h-3 shrink-0" />
+                        {group.key}
+                      </div>
+                      <div className={`text-[10px] mt-0.5 ${activeWeek === group.key ? 'text-gray-300 dark:text-gray-700' : 'text-gray-400 dark:text-gray-500'}`}>
+                        {group.trades.length} trade{group.trades.length !== 1 ? 's' : ''}
+                      </div>
+                    </button>
+                  ))}
+                  {weeklyGroups.length === 0 && (
+                    <div className="text-xs text-gray-400 dark:text-gray-500 px-2 py-4">No weeks found.</div>
+                  )}
                 </div>
-                {view === 'weekly_log' ? (
-                  <TradeTable trades={activeWeekGroup.trades} onEdit={(t) => { setEditingTrade(t); setShowForm(true); }} onDelete={handleDelete} />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                {activeWeekGroup ? (
+                  <div className={`rounded-xl border ${activeWeekGroup.isCurrent ? 'border-gray-400 dark:border-gray-500' : 'border-gray-200 dark:border-gray-800'} bg-white/50 dark:bg-gray-900/50 overflow-hidden`}>
+                    <div className={`px-4 py-2.5 text-sm font-medium ${activeWeekGroup.isCurrent ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white' : 'bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300'} flex items-center gap-2`}>
+                      <CalendarDays className="w-4 h-4" />
+                      {activeWeekGroup.key}
+                      {activeWeekGroup.isCurrent && <span className="text-xs px-1.5 py-0.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded">Current</span>}
+                    </div>
+                    {view === 'weekly_log' ? (
+                      <TradeTable trades={activeWeekGroup.trades} onEdit={(t) => { setEditingTrade(t); setShowForm(true); }} onDelete={handleDelete} />
+                    ) : (
+                      <div className="p-3">
+                        <TradeGallery trades={activeWeekGroup.trades} onEdit={(t) => { setEditingTrade(t); setShowForm(true); }} />
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <div className="p-3">
-                    <TradeGallery trades={activeWeekGroup.trades} onEdit={(t) => { setEditingTrade(t); setShowForm(true); }} />
+                  <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
+                    <Filter className="w-10 h-10 mb-3 opacity-50" />
+                    <p className="text-sm">No trades found.</p>
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
-                <Filter className="w-10 h-10 mb-3 opacity-50" />
-                <p className="text-sm">No trades found.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {filteredTrades.length === 0 && view !== 'weekly_log' && view !== 'weekly_gallery' && (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
-          <Filter className="w-10 h-10 mb-3 opacity-50" />
-          <p className="text-sm">No trades found. {view === 'full_log' && 'Add your first trade to get started.'}</p>
-        </div>
-      )}
-
+          {filteredTrades.length === 0 && view !== 'weekly_log' && view !== 'weekly_gallery' && (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400 dark:text-gray-500">
+              <Filter className="w-10 h-10 mb-3 opacity-50" />
+              <p className="text-sm">No trades found. {view === 'full_log' && 'Add your first trade to get started.'}</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -279,7 +279,7 @@ function TradeTable({ trades, onEdit, onDelete }: { trades: Trade[]; onEdit: (t:
             <th className="text-right px-3 py-2.5 font-medium">TP</th>
             <th className="text-left px-3 py-2.5 font-medium">Result</th>
             <th className="text-right px-3 py-2.5 font-medium">PnL</th>
-            <th className="text-center px-3 py-2.5 font-medium">Actions</th>
+            <th className="text-center px-3 py-2.5 font-medium"></th>
           </tr>
         </thead>
         <tbody>
@@ -290,42 +290,67 @@ function TradeTable({ trades, onEdit, onDelete }: { trades: Trade[]; onEdit: (t:
                 {t.date}{t.time && <span className="text-gray-400 dark:text-gray-500 text-xs ml-1">{t.time}</span>}
               </td>
               <td className="px-3 py-2">
-                <span className={`text-xs px-1.5 py-0.5 rounded ${t.plan_compliance ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' : 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400'}`}>
-                  {t.plan_compliance ? 'Yes' : 'No'}
-                </span>
+                {t.plan_compliance ? (
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    <Check className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">Yes</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-red-500 dark:text-red-400">
+                    <X className="w-3.5 h-3.5" />
+                    <span className="text-xs font-medium">No</span>
+                  </span>
+                )}
               </td>
-              <td className="px-3 py-2 text-gray-700 dark:text-gray-300 text-xs">{t.psychology || '-'}</td>
+              <td className="px-3 py-2 text-gray-700 dark:text-gray-300 text-xs">
+                {t.psychology ? (
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: PSYCHOLOGY_COLORS[t.psychology] || '#6b7280' }}
+                    />
+                    {t.psychology}
+                  </span>
+                ) : '-'}
+              </td>
               <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs max-w-[200px] truncate">{t.confluences.join(', ') || '-'}</td>
               <td className="px-3 py-2 text-center">
-                <span className={`text-xs px-1.5 py-0.5 rounded ${t.direction === 'long' ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300' : 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400'}`}>
+                <span
+                  className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold text-white ${
+                    t.direction === 'long' ? 'bg-teal-600' : 'bg-red-600'
+                  }`}
+                >
                   {t.direction === 'long' ? 'L' : 'S'}
                 </span>
               </td>
               <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">{t.sl_points != null ? t.sl_points.toFixed(2) : '-'}</td>
               <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">{t.tp_points != null ? t.tp_points.toFixed(2) : '-'}</td>
               <td className="px-3 py-2">
-                <span className={`text-xs px-1.5 py-0.5 rounded ${
-                  t.result === 'win' ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' :
-                  t.result === 'loss' ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400' :
-                  t.result === 'be_win' ? 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200' :
-                  t.result === 'be_loss' ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-300' :
-                  'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
-                }`}>
-                  {RESULT_LABELS[t.result] || t.result}
+                <span className="flex items-center gap-1.5 text-xs">
+                  {t.result === 'win' && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                  {(t.result === 'be_win' || t.result === 'be_loss') && <span className="w-2 h-2 rounded-full bg-gray-400" />}
+                  {t.result === 'loss' && <span className="w-2 h-2 rounded-full bg-red-500" />}
+                  {t.result === 'breakeven' && <span className="w-2 h-2 rounded-full bg-gray-400" />}
+                  <span className={
+                    t.result === 'win' ? 'text-emerald-600 dark:text-emerald-400' :
+                    t.result === 'loss' ? 'text-red-500 dark:text-red-400' :
+                    'text-gray-500 dark:text-gray-400'
+                  }>
+                    {RESULT_LABELS[t.result] || t.result}
+                  </span>
                 </span>
               </td>
-              <td className={`px-3 py-2 text-right font-medium ${t.pnl >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-500 dark:text-red-400'}`}>
-                ${t.pnl.toFixed(2)}
+              <td className={`px-3 py-2 text-right font-medium ${t.pnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                {t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(2)}
               </td>
-              <td className="px-3 py-2">
-                <div className="flex items-center justify-center gap-1">
-                  <button onClick={(e) => { e.stopPropagation(); onEdit(t); }} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+              <td className="px-3 py-2 text-center">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete(t.id); }}
+                  className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                  title="Delete trade"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </td>
             </tr>
           ))}
@@ -352,13 +377,13 @@ function TradeGallery({ trades, onEdit }: { trades: Trade[]; onEdit: (t: Trade) 
           <div className="p-3 space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-900 dark:text-white">{t.date}</span>
-              <span className={`text-xs px-1.5 py-0.5 rounded ${t.result === 'win' ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200' : t.result === 'loss' ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded ${t.result === 'win' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : t.result === 'loss' ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                 {RESULT_LABELS[t.result] || t.result}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>{t.direction === 'long' ? 'Long' : 'Short'}</span>
-              <span className={t.pnl >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-500 dark:text-red-400'}>${t.pnl.toFixed(2)}</span>
+              <span className={t.pnl >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}>{t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(2)}</span>
             </div>
           </div>
         </div>

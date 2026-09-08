@@ -74,7 +74,7 @@ export const DEFAULT_LABELS: Record<string, string> = {
   'toc.confluences': 'Confluences',
   'toc.weekdays': 'Weekdays',
   'toc.months': 'Months',
-  'toc.setup_type': 'Setup Type',
+  'toc.setup_type': 'Direction (L/S)',
 
   'section.cumulative_pnl': 'Cumulative PnL',
   'section.result': 'Result',
@@ -94,7 +94,7 @@ export const DEFAULT_LABELS: Record<string, string> = {
   'section.confluences': 'Confluences',
   'section.weekdays': 'Weekdays',
   'section.months': 'Months',
-  'section.setup_type': 'Setup Type',
+  'section.setup_type': 'Direction (L/S)',
 
   'desc.cumulative_pnl': 'Running total of profit and loss across all trades over time.',
   'desc.result': 'Breakdown of trades by outcome: wins, losses, and breakeven.',
@@ -114,7 +114,7 @@ export const DEFAULT_LABELS: Record<string, string> = {
   'desc.confluences': 'Performance breakdown by confluence factors.',
   'desc.weekdays': 'Performance breakdown by day of the week.',
   'desc.months': 'Performance breakdown by month.',
-  'desc.setup_type': 'Performance breakdown by setup type.',
+  'desc.setup_type': 'Performance breakdown by Long/Short direction.',
 
   'label.wins': 'Wins',
   'label.losses': 'Losses',
@@ -146,7 +146,7 @@ export const DEFAULT_LABELS: Record<string, string> = {
   'label.type': 'Type',
   'label.confluence': 'Confluence',
   'label.weekday': 'Weekday',
-  'label.setup': 'Setup',
+  'label.setup': 'Direction',
   'label.symbol': 'Symbol',
   'label.direction': 'Direction',
   'label.date': 'Date',

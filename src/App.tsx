@@ -4,10 +4,13 @@ import { useJournalData } from '@/hooks/useJournalData';
 import { CoverPhoto } from '@/components/CoverPhoto';
 import { DocumentaryPage } from '@/components/DocumentaryPage';
 import { StatisticsPage } from '@/components/StatisticsPage';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AuthScreen } from '@/components/AuthScreen';
 
 type Page = 'documentary' | 'statistics';
 
 function JournalApp() {
+  const { loading: authLoading } = useAuth();
   const data = useJournalData();
   const [page, setPage] = useState<Page>('documentary');
 
@@ -85,6 +88,14 @@ function JournalApp() {
   const toggleTheme = async () => {
     await data.updateSettings({ theme: isDark ? 'light' : 'dark' });
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-950">
+        <div className="animate-pulse text-gray-400 dark:text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-[#1c1c1e]' : 'bg-[#f5f5f7]'} ${isDark ? 'text-gray-100' : 'text-gray-900'} transition-colors`}>
@@ -178,6 +189,28 @@ function JournalApp() {
   );
 }
 
-export default function App() {
+function AppInner() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-950">
+        <div className="animate-pulse text-gray-400 dark:text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthScreen />;
+  }
+
   return <JournalApp />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
+  );
 }
