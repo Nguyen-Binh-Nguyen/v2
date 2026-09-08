@@ -27,8 +27,6 @@ export function StatisticsPage({ data }: StatisticsPageProps) {
   const labels = { ...DEFAULT_LABELS, ...(settings?.labels || {}) };
   const [activeSection, setActiveSection] = useState<string>('');
 
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -79,12 +77,12 @@ export function StatisticsPage({ data }: StatisticsPageProps) {
       </div>
 
       {/* Cumulative PnL */}
-      <StatSection id="cumulative_pnl" title={L('cumulative_pnl')} desc={D('cumulative_pnl')} onEditLabel={updateLabel} labelKey="section.cumulative_pnl" descKey="desc.cumulative_pnl" labels={labels}>
+      <StatSection id="cumulative_pnl" title={L('cumulative_pnl')} desc={D('cumulative_pnl')} onEditLabel={updateLabel} labelKey="section.cumulative_pnl" descKey="desc.cumulative_pnl">
         <CumulativeChart data={metrics.cumulativePnL} totalPnL={metrics.totalPnL} />
       </StatSection>
 
       {/* Result */}
-      <StatSection id="result" title={L('result')} desc={D('result')} onEditLabel={updateLabel} labelKey="section.result" descKey="desc.result" labels={labels}>
+      <StatSection id="result" title={L('result')} desc={D('result')} onEditLabel={updateLabel} labelKey="section.result" descKey="desc.result">
         <div className="grid grid-cols-3 gap-3 mb-4">
           <ResultCard label={getLabel('label.wins')} value={metrics.wins} pnl={metrics.byResult[0].pnl} color="gray" />
           <ResultCard label={getLabel('label.losses')} value={metrics.losses} pnl={metrics.byResult[1].pnl} color="red" />
@@ -98,7 +96,7 @@ export function StatisticsPage({ data }: StatisticsPageProps) {
       </StatSection>
 
       {/* Psychology */}
-      <StatSection id="psychology" title={L('psychology')} desc={D('psychology')} onEditLabel={updateLabel} labelKey="section.psychology" descKey="desc.psychology" labels={labels}>
+      <StatSection id="psychology" title={L('psychology')} desc={D('psychology')} onEditLabel={updateLabel} labelKey="section.psychology" descKey="desc.psychology">
         <BreakdownTable
           data={metrics.byPsychology}
           keyField="psychology"
@@ -109,7 +107,7 @@ export function StatisticsPage({ data }: StatisticsPageProps) {
       </StatSection>
 
       {/* Plan Compliance */}
-      <StatSection id="plan_compliance" title={L('plan_compliance')} desc={D('plan_compliance')} onEditLabel={updateLabel} labelKey="section.plan_compliance" descKey="desc.plan_compliance" labels={labels}>
+      <StatSection id="plan_compliance" title={L('plan_compliance')} desc={D('plan_compliance')} onEditLabel={updateLabel} labelKey="section.plan_compliance" descKey="desc.plan_compliance">
         <div className="grid grid-cols-2 gap-3 mb-4">
           <ResultCard label={getLabel('label.compliant')} value={metrics.compliant} pnl={metrics.byPlanCompliance[0].pnl} color="gray" />
           <ResultCard label={getLabel('label.non_compliant')} value={metrics.nonCompliant} pnl={metrics.byPlanCompliance[1].pnl} color="red" />
@@ -124,7 +122,7 @@ export function StatisticsPage({ data }: StatisticsPageProps) {
       </StatSection>
 
       {/* Profit Factor */}
-      <StatSection id="profit_factor" title={L('profit_factor')} desc={D('profit_factor')} onEditLabel={updateLabel} labelKey="section.profit_factor" descKey="desc.profit_factor" labels={labels}>
+      <StatSection id="profit_factor" title={L('profit_factor')} desc={D('profit_factor')} onEditLabel={updateLabel} labelKey="section.profit_factor" descKey="desc.profit_factor">
         <MetricCard
           label={getLabel('label.profit_factor')}
           value={metrics.profitFactor === Infinity ? '∞' : metrics.profitFactor.toFixed(2)}
@@ -136,12 +134,12 @@ export function StatisticsPage({ data }: StatisticsPageProps) {
       </StatSection>
 
       {/* Avg RR */}
-      <StatSection id="avg_rr" title={L('avg_rr')} desc={D('avg_rr')} onEditLabel={updateLabel} labelKey="section.avg_rr" descKey="desc.avg_rr" labels={labels}>
+      <StatSection id="avg_rr" title={L('avg_rr')} desc={D('avg_rr')} onEditLabel={updateLabel} labelKey="section.avg_rr" descKey="desc.avg_rr">
         <MetricCard label={getLabel('label.avg_rr_short')} value={metrics.avgRR.toFixed(2)} />
       </StatSection>
 
       {/* Expectancy */}
-      <StatSection id="expectancy" title={L('expectancy')} desc={D('expectancy')} onEditLabel={updateLabel} labelKey="section.expectancy" descKey="desc.expectancy" labels={labels}>
+      <StatSection id="expectancy" title={L('expectancy')} desc={D('expectancy')} onEditLabel={updateLabel} labelKey="section.expectancy" descKey="desc.expectancy">
         <MetricCard
           label={getLabel('label.expectancy')}
           value={`$${metrics.expectancy.toFixed(2)}`}
@@ -153,12 +151,12 @@ export function StatisticsPage({ data }: StatisticsPageProps) {
       </StatSection>
 
       {/* Max Consecutive Loss */}
-      <StatSection id="max_consecutive_loss" title={L('max_consecutive_loss')} desc={D('max_consecutive_loss')} onEditLabel={updateLabel} labelKey="section.max_consecutive_loss" descKey="desc.max_consecutive_loss" labels={labels}>
+      <StatSection id="max_consecutive_loss" title={L('max_consecutive_loss')} desc={D('max_consecutive_loss')} onEditLabel={updateLabel} labelKey="section.max_consecutive_loss" descKey="desc.max_consecutive_loss">
         <MetricCard label={getLabel('label.streak')} value={`${metrics.maxConsecutiveLoss} losses`} />
       </StatSection>
 
       {/* Max Drawdown */}
-      <StatSection id="max_drawdown" title={L('max_drawdown')} desc={D('max_drawdown')} onEditLabel={updateLabel} labelKey="section.max_drawdown" descKey="desc.max_drawdown" labels={labels}>
+      <StatSection id="max_drawdown" title={L('max_drawdown')} desc={D('max_drawdown')} onEditLabel={updateLabel} labelKey="section.max_drawdown" descKey="desc.max_drawdown">
         <MetricCard
           label={getLabel('label.drawdown')}
           value={`$${metrics.maxDrawdown.toFixed(2)}`}
@@ -170,7 +168,7 @@ export function StatisticsPage({ data }: StatisticsPageProps) {
       </StatSection>
 
       {/* Worst PnL */}
-      <StatSection id="worst_pnl" title={L('worst_pnl')} desc={D('worst_pnl')} onEditLabel={updateLabel} labelKey="section.worst_pnl" descKey="desc.worst_pnl" labels={labels}>
+      <StatSection id="worst_pnl" title={L('worst_pnl')} desc={D('worst_pnl')} onEditLabel={updateLabel} labelKey="section.worst_pnl" descKey="desc.worst_pnl">
         <div className="grid grid-cols-2 gap-3">
           <MetricCard label={getLabel('label.worst_daily')} value={`$${metrics.worstDailyPnL.toFixed(2)}`} color="red" />
           <MetricCard label={getLabel('label.worst_weekly')} value={`$${metrics.worstWeeklyPnL.toFixed(2)}`} color="red" />
@@ -178,7 +176,7 @@ export function StatisticsPage({ data }: StatisticsPageProps) {
       </StatSection>
 
       {/* Best PnL */}
-      <StatSection id="best_pnl" title={L('best_pnl')} desc={D('best_pnl')} onEditLabel={updateLabel} labelKey="section.best_pnl" descKey="desc.best_pnl" labels={labels}>
+      <StatSection id="best_pnl" title={L('best_pnl')} desc={D('best_pnl')} onEditLabel={updateLabel} labelKey="section.best_pnl" descKey="desc.best_pnl">
         <div className="grid grid-cols-2 gap-3">
           <MetricCard label={getLabel('label.best_daily')} value={`${metrics.bestDailyPnL.toFixed(2)}`} color="default" />
           <MetricCard label={getLabel('label.best_weekly')} value={`${metrics.bestWeeklyPnL.toFixed(2)}`} color="default" />
@@ -186,56 +184,55 @@ export function StatisticsPage({ data }: StatisticsPageProps) {
       </StatSection>
 
       {/* Trades by Time */}
-      <StatSection id="trades_by_time" title={L('trades_by_time')} desc={D('trades_by_time')} onEditLabel={updateLabel} labelKey="section.trades_by_time" descKey="desc.trades_by_time" labels={labels}>
+      <StatSection id="trades_by_time" title={L('trades_by_time')} desc={D('trades_by_time')} onEditLabel={updateLabel} labelKey="section.trades_by_time" descKey="desc.trades_by_time">
         <BarChart data={metrics.tradesByTime.map((d) => ({ label: d.hour, value: d.count }))} color="#6b7280" valueLabel={getLabel('label.trades')} />
       </StatSection>
 
       {/* Win Rate by Time */}
-      <StatSection id="win_rate_by_time" title={L('win_rate_by_time')} desc={D('win_rate_by_time')} onEditLabel={updateLabel} labelKey="section.win_rate_by_time" descKey="desc.win_rate_by_time" labels={labels}>
+      <StatSection id="win_rate_by_time" title={L('win_rate_by_time')} desc={D('win_rate_by_time')} onEditLabel={updateLabel} labelKey="section.win_rate_by_time" descKey="desc.win_rate_by_time">
         <BarChart data={metrics.winRateByTime.map((d) => ({ label: d.hour, value: d.winRate }))} color="#10b981" valueLabel={getLabel('label.win_rate_pct')} maxOverride={100} />
       </StatSection>
 
       {/* Total PnL by Time */}
-      <StatSection id="total_pnl_by_time" title={L('total_pnl_by_time')} desc={D('total_pnl_by_time')} onEditLabel={updateLabel} labelKey="section.total_pnl_by_time" descKey="desc.total_pnl_by_time" labels={labels}>
+      <StatSection id="total_pnl_by_time" title={L('total_pnl_by_time')} desc={D('total_pnl_by_time')} onEditLabel={updateLabel} labelKey="section.total_pnl_by_time" descKey="desc.total_pnl_by_time">
         <BarChart data={metrics.totalPnLByTime.map((d) => ({ label: d.hour, value: d.pnl }))} color="#8b5cf6" valueLabel={getLabel('label.pnl')} signed />
       </StatSection>
 
       {/* Avg PnL by Time */}
-      <StatSection id="avg_pnl_by_time" title={L('avg_pnl_by_time')} desc={D('avg_pnl_by_time')} onEditLabel={updateLabel} labelKey="section.avg_pnl_by_time" descKey="desc.avg_pnl_by_time" labels={labels}>
+      <StatSection id="avg_pnl_by_time" title={L('avg_pnl_by_time')} desc={D('avg_pnl_by_time')} onEditLabel={updateLabel} labelKey="section.avg_pnl_by_time" descKey="desc.avg_pnl_by_time">
         <BarChart data={metrics.avgPnLByTime.map((d) => ({ label: d.hour, value: d.avgPnL }))} color="#f59e0b" valueLabel={getLabel('label.avg_pnl_per_trade')} signed />
       </StatSection>
 
       {/* Confluences */}
-      <StatSection id="confluences" title={L('confluences')} desc={D('confluences')} onEditLabel={updateLabel} labelKey="section.confluences" descKey="desc.confluences" labels={labels}>
+      <StatSection id="confluences" title={L('confluences')} desc={D('confluences')} onEditLabel={updateLabel} labelKey="section.confluences" descKey="desc.confluences">
         <BreakdownTable data={metrics.byConfluence} keyField="confluence" labelKey="label.confluence" labels={labels} showWinRate />
       </StatSection>
 
       {/* Weekdays */}
-      <StatSection id="weekdays" title={L('weekdays')} desc={D('weekdays')} onEditLabel={updateLabel} labelKey="section.weekdays" descKey="desc.weekdays" labels={labels}>
+      <StatSection id="weekdays" title={L('weekdays')} desc={D('weekdays')} onEditLabel={updateLabel} labelKey="section.weekdays" descKey="desc.weekdays">
         <BreakdownTable data={metrics.byWeekday} keyField="day" labelKey="label.weekday" labels={labels} showWinRate />
       </StatSection>
 
       {/* Months */}
-      <StatSection id="months" title={L('months')} desc={D('months')} onEditLabel={updateLabel} labelKey="section.months" descKey="desc.months" labels={labels}>
+      <StatSection id="months" title={L('months')} desc={D('months')} onEditLabel={updateLabel} labelKey="section.months" descKey="desc.months">
         <BreakdownTable data={metrics.byMonth} keyField="month" labelKey="label.month" labels={labels} showWinRate />
       </StatSection>
 
       {/* Setup Type */}
-      <StatSection id="setup_type" title={L('setup_type')} desc={D('setup_type')} onEditLabel={updateLabel} labelKey="section.setup_type" descKey="desc.setup_type" labels={labels}>
+      <StatSection id="setup_type" title={L('setup_type')} desc={D('setup_type')} onEditLabel={updateLabel} labelKey="section.setup_type" descKey="desc.setup_type">
         <BreakdownTable data={metrics.bySetup} keyField="type" labelKey="label.setup" labels={labels} showWinRate />
       </StatSection>
     </div>
   );
 }
 
-function StatSection({ id, title, desc, onEditLabel, labelKey, descKey, labels, children }: {
+function StatSection({ id, title, desc, onEditLabel, labelKey, descKey, children }: {
   id: string;
   title: string;
   desc: string;
   onEditLabel: (key: string, value: string) => Promise<void>;
   labelKey: string;
   descKey: string;
-  labels: Record<string, string>;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -492,7 +489,7 @@ function BarChart({ data, color, valueLabel, signed, maxOverride }: {
 }
 
 function BreakdownTable({ data, keyField, labelKey, labels, showWinRate }: {
-  data: Record<string, any>[];
+  data: Array<Record<string, string | number>>;
   keyField: string;
   labelKey: string;
   labels: Record<string, string>;
@@ -513,10 +510,10 @@ function BreakdownTable({ data, keyField, labelKey, labels, showWinRate }: {
         <tbody>
           {data.map((row, i) => (
             <tr key={i} className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-              <td className="px-3 py-2 text-gray-700 dark:text-gray-300 font-medium">{row[keyField]}</td>
-              <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">{row.trades}</td>
-              <td className={`px-3 py-2 text-right font-medium ${row.pnl >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-500 dark:text-red-400'}`}>${row.pnl.toFixed(2)}</td>
-              {showWinRate && <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">{row.winRate.toFixed(1)}%</td>}
+              <td className="px-3 py-2 text-gray-700 dark:text-gray-300 font-medium">{String(row[keyField] ?? '')}</td>
+              <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">{Number(row.trades ?? 0)}</td>
+              <td className={`px-3 py-2 text-right font-medium ${Number(row.pnl ?? 0) >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-500 dark:text-red-400'}`}>${Number(row.pnl ?? 0).toFixed(2)}</td>
+              {showWinRate && <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">{Number(row.winRate ?? 0).toFixed(1)}%</td>}
             </tr>
           ))}
         </tbody>
