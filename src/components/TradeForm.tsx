@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { X, Upload, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
 import type { Trade } from '@/lib/supabase';
-import { useJournalData } from '@/hooks/useJournalData';
+import type { UseJournalData } from '@/hooks/useJournalData';
 import { PSYCHOLOGY_OPTIONS, RESULT_LABELS } from '@/lib/metrics';
 
 type TradeFormProps = {
@@ -9,6 +9,7 @@ type TradeFormProps = {
   onClose: () => void;
   onSave: (trade: Omit<Trade, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>;
   initialDate?: string;
+  data: UseJournalData;
 };
 
 const DIRECTIONS: ('long' | 'short')[] = ['long', 'short'];
@@ -31,8 +32,8 @@ M1:
 Mistakes from Today:
 `;
 
-export function TradeForm({ trade, onClose, onSave, initialDate }: TradeFormProps) {
-  const { uploadImage, getSignedUrl, settings, updateConfluences } = useJournalData();
+export function TradeForm({ trade, onClose, onSave, initialDate, data }: TradeFormProps) {
+  const { uploadImage, getSignedUrl, settings, updateConfluences } = data;
   const [form, setForm] = useState({
     date: trade?.date || initialDate || new Date().toISOString().slice(0, 10),
     time: trade?.time || '',
@@ -157,7 +158,6 @@ export function TradeForm({ trade, onClose, onSave, initialDate }: TradeFormProp
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-6">
-          {/* Section 1: Form Fields */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-1 border-b border-gray-200 dark:border-gray-800">Trade Details</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -192,7 +192,6 @@ export function TradeForm({ trade, onClose, onSave, initialDate }: TradeFormProp
               </div>
             </div>
 
-            {/* Confluences */}
             <div className="mt-4">
               <div className="flex items-center justify-between mb-1">
                 <label className={labelClass + ' mb-0'}>Confluences</label>
@@ -281,7 +280,6 @@ export function TradeForm({ trade, onClose, onSave, initialDate }: TradeFormProp
             </div>
           </div>
 
-          {/* Section 2: Notes */}
           <div>
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-1 border-b border-gray-200 dark:border-gray-800">Notes & Analysis</h3>
             <div>

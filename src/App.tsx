@@ -1,21 +1,16 @@
 import { useEffect, useState } from 'react';
-import { LineChart, Moon, Sun, LogOut, FileText, BarChart3 } from 'lucide-react';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { LineChart, Moon, Sun, FileText, BarChart3 } from 'lucide-react';
 import { useJournalData } from '@/hooks/useJournalData';
-import { AuthScreen } from '@/components/AuthScreen';
 import { CoverPhoto } from '@/components/CoverPhoto';
 import { DocumentaryPage } from '@/components/DocumentaryPage';
 import { StatisticsPage } from '@/components/StatisticsPage';
-import { DEFAULT_LABELS } from '@/lib/supabase';
 
 type Page = 'documentary' | 'statistics';
 
 function JournalApp() {
-  const { user, loading, signOut } = useAuth();
   const data = useJournalData();
   const [page, setPage] = useState<Page>('documentary');
 
-  // Keyboard shortcuts: Cmd+1 = Documentary, Cmd+2 = Statistics
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === '1') {
@@ -30,7 +25,6 @@ function JournalApp() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Apply theme — default to dark until settings load
   const theme = data.settings?.theme || 'dark';
   const isDark = theme === 'dark';
 
@@ -53,7 +47,7 @@ function JournalApp() {
     } else {
       setDocCoverUrl(null);
     }
-  }, [data.settings?.documentary_cover]);
+  }, [data.settings?.documentary_cover, data.getSignedUrl]);
 
   useEffect(() => {
     if (data.settings?.statistics_cover) {
@@ -61,19 +55,7 @@ function JournalApp() {
     } else {
       setStatCoverUrl(null);
     }
-  }, [data.settings?.statistics_cover]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center">
-        <div className="animate-pulse text-gray-400 dark:text-gray-500">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <AuthScreen />;
-  }
+  }, [data.settings?.statistics_cover, data.getSignedUrl]);
 
   const handleCoverUpload = async (file: File, whichPage: Page) => {
     const path = await data.uploadImage(file, `${whichPage}_cover`);
@@ -106,7 +88,6 @@ function JournalApp() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-[#1c1c1e]' : 'bg-[#f5f5f7]'} ${isDark ? 'text-gray-100' : 'text-gray-900'} transition-colors`}>
-      {/* Header */}
       <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${
         isDark
           ? 'bg-gray-900/80 border-gray-800'
@@ -120,7 +101,6 @@ function JournalApp() {
             <span className="font-semibold text-lg hidden sm:block">Journal</span>
           </div>
 
-          {/* Tab switcher */}
           <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
             <button
               onClick={() => setPage('documentary')}
@@ -158,22 +138,10 @@ function JournalApp() {
             >
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button
-              onClick={signOut}
-              className={`p-2 rounded-lg transition-colors ${
-                isDark
-                  ? 'text-gray-400 hover:text-red-400 hover:bg-gray-800'
-                  : 'text-gray-600 hover:text-red-500 hover:bg-gray-100'
-              }`}
-              title="Sign out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </header>
 
-      {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {data.loading ? (
           <div className="flex items-center justify-center py-20">
@@ -181,7 +149,6 @@ function JournalApp() {
           </div>
         ) : (
           <>
-            {/* Cover photo */}
             <div className="mb-6">
               <CoverPhoto
                 coverUrl={page === 'documentary' ? docCoverUrl : statCoverUrl}
@@ -189,7 +156,6 @@ function JournalApp() {
                 onUpload={(file) => handleCoverUpload(file, page)}
                 onReposition={(offset) => handleCoverReposition(offset, page)}
                 onRemove={() => handleCoverRemove(page)}
-                theme={theme}
               />
             </div>
 
@@ -213,9 +179,5 @@ function JournalApp() {
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <JournalApp />
-    </AuthProvider>
-  );
+  return <JournalApp />;
 }

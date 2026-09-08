@@ -255,7 +255,7 @@ export function DocumentaryPage({ data }: DocumentaryPageProps) {
       </div>
 
       {showForm && (
-        <TradeForm trade={editingTrade} onClose={() => setShowForm(false)} onSave={handleSave} />
+        <TradeForm trade={editingTrade} onClose={() => setShowForm(false)} onSave={handleSave} data={data} />
       )}
     </div>
   );

@@ -1,29 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase, type Trade, type JournalSettings, DEFAULT_LABELS, DEFAULT_CONFLUENCES, STORAGE_BUCKET } from '@/lib/supabase';
-import { useAuth } from '@/context/AuthContext';
 
 export function useJournalData() {
-  const { user } = useAuth();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [settings, setSettings] = useState<JournalSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchTrades = useCallback(async () => {
-    if (!user) return;
     const { data, error } = await supabase.from('trades').select('*').order('date', { ascending: true });
     if (error) {
       console.error('fetch trades', error);
       return;
     }
     setTrades((data || []) as Trade[]);
-  }, [user]);
+  }, []);
 
   const fetchSettings = useCallback(async () => {
-    if (!user) return;
     const { data, error } = await supabase
       .from('journal_settings')
       .select('*')
-      .eq('user_id', user.id)
       .maybeSingle();
     if (error) {
       console.error('fetch settings', error);
@@ -34,7 +29,7 @@ export function useJournalData() {
     } else {
       const { data: created, error: createError } = await supabase
         .from('journal_settings')
-        .insert({ user_id: user.id, theme: 'dark', labels: DEFAULT_LABELS, confluences: DEFAULT_CONFLUENCES })
+        .insert({ theme: 'dark', labels: DEFAULT_LABELS, confluences: DEFAULT_CONFLUENCES })
         .select('*')
         .single();
       if (createError) {
@@ -43,18 +38,12 @@ export function useJournalData() {
       }
       setSettings(created as JournalSettings);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
-    if (!user) {
-      setTrades([]);
-      setSettings(null);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     Promise.all([fetchTrades(), fetchSettings()]).finally(() => setLoading(false));
-  }, [user, fetchTrades, fetchSettings]);
+  }, [fetchTrades, fetchSettings]);
 
   const addTrade = useCallback(async (trade: Omit<Trade, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     const { data, error } = await supabase.from('trades').insert(trade).select('*').single();
@@ -107,13 +96,12 @@ export function useJournalData() {
   );
 
   const uploadImage = useCallback(async (file: File, folder: string) => {
-    if (!user) throw new Error('Not authenticated');
     const ext = file.name.split('.').pop() || 'png';
-    const path = `${user.id}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, { upsert: false });
     if (error) throw error;
     return path;
-  }, [user]);
+  }, []);
 
   const getSignedUrl = useCallback(async (path: string) => {
     const { data, error } = await supabase.storage.from(STORAGE_BUCKET).createSignedUrl(path, 3600);
