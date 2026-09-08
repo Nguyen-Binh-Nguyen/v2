@@ -1,310 +1,221 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { BarChart3, Check, ChevronDown, ChevronRight, ClipboardList, Download, Image as ImageIcon, Menu, Moon, MoreHorizontal, Plus, RotateCcw, Settings2, Sparkles, Sun, Target, TrendingUp, X } from 'lucide-react';
-import type { Page, Trade, TradeView, BoardGroup } from './types';
-import { realTrades } from './trades';
-import { calculateAnalytics, formatCurrency, weekKey } from './analytics';
-import { TradeTable, TradeGallery, WeeklyTable, WeeklyGallery, JournalToolbar, ViewTabs } from './components/JournalViews';
-import { StatisticsPage } from './components/StatisticsPage';
-import { TradeForm, blankForm } from './components/TradeForm';
-import type { TradeFormState } from './components/TradeForm';
-import { MiniStat } from './components/ui';
-import { TradeDetail } from './components/TradeDetail';
-import { fetchTrades, insertTradeDb, updateTradeDb, deleteTradeDb, clearAllTradesDb, restoreDemoTradesDb } from './lib/tradeApi';
+import { useEffect, useState } from 'react';
+import { LineChart, Moon, Sun, LogOut, FileText, BarChart3 } from 'lucide-react';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { useJournalData } from '@/hooks/useJournalData';
+import { AuthScreen } from '@/components/AuthScreen';
+import { CoverPhoto } from '@/components/CoverPhoto';
+import { DocumentaryPage } from '@/components/DocumentaryPage';
+import { StatisticsPage } from '@/components/StatisticsPage';
+import { DEFAULT_LABELS } from '@/lib/supabase';
 
-function App() {
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState<Page>('journal');
-  const [view, setView] = useState<TradeView>('full-log');
-  const [boardGroup, setBoardGroup] = useState<BoardGroup>('week');
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<TradeFormState>(blankForm);
-  const [query, setQuery] = useState('');
-  const [sortAscending, setSortAscending] = useState(false);
-  const [notice, setNotice] = useState('');
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => localStorage.getItem('tradecraft-theme') === 'light' ? 'light' : 'dark');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [detailTrade, setDetailTrade] = useState<Trade | null>(null);
-  const [coverImage, setCoverImage] = useState('');
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
+type Page = 'documentary' | 'statistics';
 
+function JournalApp() {
+  const { user, loading, signOut } = useAuth();
+  const data = useJournalData();
+  const [page, setPage] = useState<Page>('documentary');
+
+  // Keyboard shortcuts: Cmd+1 = Documentary, Cmd+2 = Statistics
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await fetchTrades();
-        if (data.length === 0) {
-          await restoreDemoTradesDb();
-          const fresh = await fetchTrades();
-          setTrades(fresh);
-        } else {
-          setTrades(data);
-        }
-      } catch {
-        setTrades(realTrades);
-      } finally {
-        setLoading(false);
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+        e.preventDefault();
+        setPage('documentary');
+      } else if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+        e.preventDefault();
+        setPage('statistics');
       }
-    })();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const filteredTrades = useMemo(() => {
-    let result = trades;
-    if (view === 'loss-log') result = result.filter((t) => t.result === 'Loss');
-    else if (view === 'win-log') result = result.filter((t) => t.result === 'Win');
-    else if (view === 'weekly-log' || view === 'weekly-gallery') {
-      const currentWeek = weekKey(new Date().toISOString());
-      result = result.filter((t) => weekKey(t.dateTime) === currentWeek);
+  // Apply theme — default to dark until settings load
+  const theme = data.settings?.theme || 'dark';
+  const isDark = theme === 'dark';
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      document.body.style.backgroundColor = '#1c1c1e';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.style.backgroundColor = '#f5f5f5';
     }
-    return result
-      .filter((t) => Object.values(t).join(' ').toLowerCase().includes(query.toLowerCase()))
-      .sort((a, b) => sortAscending ? a.dateTime.localeCompare(b.dateTime) : b.dateTime.localeCompare(a.dateTime));
-  }, [trades, query, sortAscending, view]);
+  }, [isDark]);
 
-  const analytics = useMemo(() => calculateAnalytics(trades), [trades]);
+  const [docCoverUrl, setDocCoverUrl] = useState<string | null>(null);
+  const [statCoverUrl, setStatCoverUrl] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const newTrade: Trade = {
-      id: crypto.randomUUID(),
-      name: form.name || `TEST ${String(trades.length + 1).padStart(2, '0')}`,
-      dateTime: form.dateTime,
-      type: form.type,
-      result: form.result,
-      pnl: Number(form.pnl),
-      planCompliance: form.planCompliance,
-      psychology: form.psychology,
-      setupType: form.setupType,
-      confluences: form.confluences,
-      direction: form.direction,
-      sl: Number(form.sl) || 0,
-      tp: Number(form.tp) || 0,
-      rr: Number(form.rr) || 0,
-      notes: '',
-      imageUrl: '',
-    };
-    try {
-      await insertTradeDb(newTrade);
-      setTrades([newTrade, ...trades]);
-      setForm(blankForm);
-      setShowForm(false);
-      setNotice('Trade added');
-      window.setTimeout(() => setNotice(''), 2800);
-    } catch {
-      setNotice('Failed to save trade');
-      window.setTimeout(() => setNotice(''), 2800);
+  useEffect(() => {
+    if (data.settings?.documentary_cover) {
+      data.getSignedUrl(data.settings.documentary_cover).then(setDocCoverUrl).catch(() => setDocCoverUrl(null));
+    } else {
+      setDocCoverUrl(null);
     }
-  };
+  }, [data.settings?.documentary_cover]);
 
-  const deleteTrade = async (id: string) => {
-    try {
-      await deleteTradeDb(id);
-      setTrades(trades.filter((t) => t.id !== id));
-      setNotice('Trade deleted');
-      window.setTimeout(() => setNotice(''), 2800);
-    } catch {
-      setNotice('Failed to delete');
-      window.setTimeout(() => setNotice(''), 2800);
+  useEffect(() => {
+    if (data.settings?.statistics_cover) {
+      data.getSignedUrl(data.settings.statistics_cover).then(setStatCoverUrl).catch(() => setStatCoverUrl(null));
+    } else {
+      setStatCoverUrl(null);
     }
-  };
-
-  const saveTrade = async (updated: Trade) => {
-    try {
-      await updateTradeDb(updated);
-      setTrades(trades.map((t) => t.id === updated.id ? updated : t));
-      setDetailTrade(null);
-      setNotice('Trade saved');
-      window.setTimeout(() => setNotice(''), 2800);
-    } catch {
-      setNotice('Failed to save');
-      window.setTimeout(() => setNotice(''), 2800);
-    }
-  };
-
-  const clearJournal = async () => {
-    try {
-      await clearAllTradesDb();
-      setTrades([]);
-      setShowClearConfirm(false);
-      setNotice('Journal cleared');
-      window.setTimeout(() => setNotice(''), 2800);
-    } catch {
-      setNotice('Failed to clear');
-      window.setTimeout(() => setNotice(''), 2800);
-    }
-  };
-
-  const restoreDemo = async () => {
-    try {
-      await restoreDemoTradesDb();
-      const fresh = await fetchTrades();
-      setTrades(fresh);
-      setNotice('Demo data restored');
-      window.setTimeout(() => setNotice(''), 2800);
-    } catch {
-      setNotice('Failed to restore');
-      window.setTimeout(() => setNotice(''), 2800);
-    }
-  };
-
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    localStorage.setItem('tradecraft-theme', next);
-  };
-
-  const exportJournal = () => {
-    const blob = new Blob([JSON.stringify(trades, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'trading-journal.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setCoverImage(ev.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const avgProfit = trades.length ? trades.reduce((s, t) => s + t.pnl, 0) / trades.length : 0;
-  const winPnls = trades.filter((t) => t.pnl > 0).map((t) => t.pnl);
-  const lossPnls = trades.filter((t) => t.pnl < 0).map((t) => t.pnl);
-  const avgWin = winPnls.length ? winPnls.reduce((s, v) => s + v, 0) / winPnls.length : 0;
-  const avgLoss = lossPnls.length ? lossPnls.reduce((s, v) => s + v, 0) / lossPnls.length : 0;
+  }, [data.settings?.statistics_cover]);
 
   if (loading) {
-    return <div className="app-shell dark"><div className="loading-state">Loading your journal...</div></div>;
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center">
+        <div className="animate-pulse text-gray-400 dark:text-gray-500">Loading...</div>
+      </div>
+    );
   }
 
+  if (!user) {
+    return <AuthScreen />;
+  }
+
+  const handleCoverUpload = async (file: File, whichPage: Page) => {
+    const path = await data.uploadImage(file, `${whichPage}_cover`);
+    if (whichPage === 'documentary') {
+      await data.updateSettings({ documentary_cover: path });
+    } else {
+      await data.updateSettings({ statistics_cover: path });
+    }
+  };
+
+  const handleCoverReposition = async (offset: number, whichPage: Page) => {
+    if (whichPage === 'documentary') {
+      await data.updateSettings({ documentary_cover_offset: offset });
+    } else {
+      await data.updateSettings({ statistics_cover_offset: offset });
+    }
+  };
+
+  const handleCoverRemove = async (whichPage: Page) => {
+    if (whichPage === 'documentary') {
+      await data.updateSettings({ documentary_cover: null, documentary_cover_offset: 50 });
+    } else {
+      await data.updateSettings({ statistics_cover: null, statistics_cover_offset: 50 });
+    }
+  };
+
+  const toggleTheme = async () => {
+    await data.updateSettings({ theme: isDark ? 'light' : 'dark' });
+  };
+
   return (
-    <div className={`app-shell ${theme} ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark"><Target size={17} /></div>
-          <span className="brand-name">Journal</span>
-          <button className="icon-button sidebar-menu" onClick={() => setSidebarOpen(!sidebarOpen)}><Menu size={16} /></button>
-        </div>
-        <div className="workspace">
-          <div className="avatar">TC</div>
-          <div><strong>My workspace</strong><span>Private documentary</span></div>
-          <ChevronDown size={15} />
-        </div>
-        <nav className="nav-list">
-          <button className={page === 'journal' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('journal')}>
-            <ClipboardList size={16} />Documentary <span className="nav-count">{trades.length}</span>
-          </button>
-          <button className={page === 'statistics' ? 'nav-item active' : 'nav-item'} onClick={() => setPage('statistics')}>
-            <BarChart3 size={16} />Statistics
-          </button>
-        </nav>
-        <div className="sidebar-section">
-          <div className="sidebar-label">Workspace</div>
-          <button className="nav-item muted"><Sparkles size={15} />Review ritual</button>
-          <button className="nav-item muted"><Settings2 size={15} />Preferences</button>
-        </div>
-        <div className="sidebar-footer">
-          <div className="offline-dot"></div>
-          <span>Private & offline</span>
-        </div>
-      </aside>
-
-      <main className="main-content">
-        <header className="topbar">
-          <div className="breadcrumbs">
-            {!sidebarOpen && <button className="icon-button" onClick={() => setSidebarOpen(true)}><Menu size={16} /></button>}
-            <span>Workspace</span>
-            <ChevronRight size={13} />
-            <strong>{page === 'journal' ? 'Documentary' : 'Statistics'}</strong>
+    <div className={`min-h-screen ${isDark ? 'bg-[#1c1c1e]' : 'bg-[#f5f5f7]'} ${isDark ? 'text-gray-100' : 'text-gray-900'} transition-colors`}>
+      {/* Header */}
+      <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${
+        isDark
+          ? 'bg-gray-900/80 border-gray-800'
+          : 'bg-white/80 border-gray-200'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center">
+              <LineChart className="w-5 h-5 text-white dark:text-gray-900" />
+            </div>
+            <span className="font-semibold text-lg hidden sm:block">Journal</span>
           </div>
-          <div className="top-actions">
-            <div className="privacy-chip"><span className="pulse"></span>Auto-saved</div>
-            <button className="theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}<span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+
+          {/* Tab switcher */}
+          <div className={`flex gap-1 p-1 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+            <button
+              onClick={() => setPage('documentary')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                page === 'documentary'
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm'
+                  : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              Documentary
             </button>
-            <button className="icon-button"><MoreHorizontal size={18} /></button>
+            <button
+              onClick={() => setPage('statistics')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                page === 'statistics'
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-sm'
+                  : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              Statistics
+            </button>
           </div>
-        </header>
 
-        <div className="page-wrap">
-          {page === 'journal' ? (
-            <>
-              <section className="documentary-cover" aria-label="Documentary cover">
-                {coverImage && <img src={coverImage} alt="Cover" className="cover-img" />}
-                <div className="cover-grain"></div>
-                <label className="cover-upload-btn">
-                  <input type="file" accept="image/*" onChange={handleCoverUpload} hidden />
-                  <ImageIcon size={14} /> {coverImage ? 'Change cover' : 'Upload cover image'}
-                </label>
-              </section>
-
-              <section className="documentary-heading">
-                <div className="documentary-title"><ClipboardList size={24} /><h1>DOCUMENTARY</h1></div>
-              </section>
-
-              <section className="hero-row documentary-actions">
-                <div></div>
-                <div className="hero-actions">
-                  <button className="button secondary" onClick={exportJournal}><Download size={15} />Export</button>
-                  <button className="button primary" onClick={() => setShowForm(true)}><Plus size={17} />New trade</button>
-                </div>
-              </section>
-
-              <div className="quick-stats">
-                <MiniStat label="Cumulative PnL" value={formatCurrency(trades.reduce((s, t) => s + t.pnl, 0))} tone={trades.reduce((s, t) => s + t.pnl, 0) >= 0 ? 'positive' : 'negative'} icon={<TrendingUp size={15} />} />
-                <MiniStat label="Trades logged" value={String(trades.length).padStart(2, '0')} icon={<ClipboardList size={15} />} />
-                <MiniStat label="Avg profit" value={formatCurrency(avgWin)} tone="positive" icon={<TrendingUp size={15} />} />
-                <MiniStat label="Avg loss" value={formatCurrency(avgLoss)} tone="negative" icon={<TrendingUp size={15} />} />
-              </div>
-
-              <section className="panel journal-panel">
-                <div className="panel-head">
-                  <div>
-                    <div className="panel-title"><ClipboardList size={17} />Documentary log</div>
-                    <div className="panel-caption">Your execution history · {trades.length} records</div>
-                  </div>
-                </div>
-                <ViewTabs view={view} setView={setView} />
-                <JournalToolbar query={query} setQuery={setQuery} />
-                {view === 'full-log' && <TradeTable trades={filteredTrades} sortAscending={sortAscending} setSortAscending={setSortAscending} onRowClick={setDetailTrade} onDelete={deleteTrade} />}
-                {view === 'full-gallery' && <TradeGallery trades={filteredTrades} onCardClick={setDetailTrade} />}
-                {view === 'weekly-log' && <WeeklyTable trades={filteredTrades} sortAscending={sortAscending} setSortAscending={setSortAscending} onRowClick={setDetailTrade} onDelete={deleteTrade} />}
-                {view === 'weekly-gallery' && <WeeklyGallery trades={filteredTrades} onCardClick={setDetailTrade} />}
-                {view === 'loss-log' && <TradeTable trades={filteredTrades} sortAscending={sortAscending} setSortAscending={setSortAscending} onRowClick={setDetailTrade} onDelete={deleteTrade} />}
-                {view === 'win-log' && <TradeTable trades={filteredTrades} sortAscending={sortAscending} setSortAscending={setSortAscending} onRowClick={setDetailTrade} onDelete={deleteTrade} />}
-              </section>
-
-              <div className="journal-foot">
-                <span><span className="offline-dot"></span>Everything is auto-saved</span>
-                <div>
-                  <button onClick={restoreDemo}><RotateCcw size={13} />Restore demo data</button>
-                  {showClearConfirm ? (
-                    <span className="confirm-inline">
-                      <span className="confirm-text">Sure?</span>
-                      <button className="button danger small" onClick={clearJournal}>Yes, clear</button>
-                      <button className="button secondary small" onClick={() => setShowClearConfirm(false)}>Cancel</button>
-                    </span>
-                  ) : (
-                    <button onClick={() => setShowClearConfirm(true)}><X size={13} />Clear journal</button>
-                  )}
-                </div>
-              </div>
-            </>
-          ) : (
-            <StatisticsPage analytics={analytics} trades={trades} />
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className={`p-2 rounded-lg transition-colors ${
+                isDark
+                  ? 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+              title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={signOut}
+              className={`p-2 rounded-lg transition-colors ${
+                isDark
+                  ? 'text-gray-400 hover:text-red-400 hover:bg-gray-800'
+                  : 'text-gray-600 hover:text-red-500 hover:bg-gray-100'
+              }`}
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-      </main>
+      </header>
 
-      {showForm && <TradeForm form={form} setForm={setForm} onSubmit={handleSubmit} onClose={() => setShowForm(false)} />}
-      {detailTrade && <TradeDetail trade={detailTrade} onClose={() => setDetailTrade(null)} onSave={saveTrade} onDelete={deleteTrade} />}
-      {notice && <div className="toast"><Check size={16} />{notice}</div>}
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {data.loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-pulse text-gray-400 dark:text-gray-500">Loading your journal...</div>
+          </div>
+        ) : (
+          <>
+            {/* Cover photo */}
+            <div className="mb-6">
+              <CoverPhoto
+                coverUrl={page === 'documentary' ? docCoverUrl : statCoverUrl}
+                offset={page === 'documentary' ? data.settings?.documentary_cover_offset || 50 : data.settings?.statistics_cover_offset || 50}
+                onUpload={(file) => handleCoverUpload(file, page)}
+                onReposition={(offset) => handleCoverReposition(offset, page)}
+                onRemove={() => handleCoverRemove(page)}
+                theme={theme}
+              />
+            </div>
+
+            {page === 'statistics' && (
+              <div className="mb-6">
+                <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Statistics</h1>
+                <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Analyze your trading performance</p>
+              </div>
+            )}
+
+            {page === 'documentary' ? (
+              <DocumentaryPage data={data} />
+            ) : (
+              <StatisticsPage data={data} />
+            )}
+          </>
+        )}
+      </main>
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <JournalApp />
+    </AuthProvider>
+  );
+}
